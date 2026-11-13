@@ -126,11 +126,19 @@ export function AnswerCard({
   onCite: (id: string) => void
 }) {
   const status = STATUS[result.grounding_status]
-  // Students see one source only: the first one the answer itself cites, or
-  // failing that the first cited anywhere. Tags for other sources are hidden.
+  // Students see one source only. It is the first source tagged in the answer;
+  // if the answer carries no tag, the first one tagged in the explanation, then
+  // in the reasoning. Only when no text names a source does it fall back to a
+  // cited document, preferring one the classifier marked Direct-Assist.
   const byId = new Map(result.citations.map((c) => [c.source_id, c]))
-  const firstTag = (result.answer.match(/S\d+/gi) ?? []).map((id) => id.toUpperCase()).find((id) => byId.has(id))
-  const primary = (firstTag ? byId.get(firstTag) : undefined) ?? result.citations.find((c) => c.cited) ?? null
+  const firstTagged = (text: string) =>
+    (text.match(/S\d+/gi) ?? []).map((id) => id.toUpperCase()).find((id) => byId.has(id))
+  const taggedId = firstTagged(result.answer) ?? firstTagged(result.explanation ?? '') ?? firstTagged(result.reasoning ?? '')
+  const primary =
+    (taggedId ? byId.get(taggedId) : undefined) ??
+    result.citations.find((c) => c.cited && c.role === 'direct') ??
+    result.citations.find((c) => c.cited) ??
+    null
   const known = new Set(primary ? [primary.source_id] : [])
 
   return (
