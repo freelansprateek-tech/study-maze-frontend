@@ -131,8 +131,12 @@ export function AnswerCard({
   // in the reasoning. Only when no text names a source does it fall back to a
   // cited document, preferring one the classifier marked Direct-Assist.
   const byId = new Map(result.citations.map((c) => [c.source_id, c]))
+  // Only tags inside square brackets count: a bare "S3" also occurs in the chip name "ESP32-S3".
   const firstTagged = (text: string) =>
-    (text.match(/S\d+/gi) ?? []).map((id) => id.toUpperCase()).find((id) => byId.has(id))
+    (text.match(CITATION_GROUP) ?? [])
+      .flatMap((group) => group.match(/S\d+/gi) ?? [])
+      .map((id) => id.toUpperCase())
+      .find((id) => byId.has(id))
   const taggedId = firstTagged(result.answer) ?? firstTagged(result.explanation ?? '') ?? firstTagged(result.reasoning ?? '')
   const primary =
     (taggedId ? byId.get(taggedId) : undefined) ??
